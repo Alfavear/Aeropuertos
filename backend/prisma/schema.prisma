@@ -1,0 +1,1019 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// MODULO: ORGANIZACION
+// ============================================================
+
+model Pais {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @db.VarChar(10)
+  nombre    String   @db.VarChar(100)
+  nacionalidad String? @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("paises")
+}
+
+model Ciudad {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @db.VarChar(25)
+  nombre    String   @db.VarChar(100)
+  idPais    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ciudades")
+}
+
+model Aeropuerto {
+  id                    Int      @id @default(autoincrement())
+  codigo                String   @unique @db.VarChar(25)
+  nombre                String   @db.VarChar(100)
+  idCiudad              Int
+  idZona                Int
+  idPais                Int?
+  tasa                  Decimal  @db.Decimal(18, 4)
+  manejoCarga           Boolean  @default(false)
+  controlAdministrativo Boolean  @default(false)
+  numeroHangares        Int?     @default(0)
+  bu                    String?  @db.VarChar(25)
+  horaI                 String?  @db.VarChar(10)
+  horaF                 String?  @db.VarChar(10)
+  dirAeropuerto         String?  @db.VarChar(150)
+  repreAeroCivil        String?  @db.VarChar(150)
+  cerrarDia             Int?
+  horaCierre            String?  @db.VarChar(4)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("aeropuertos")
+}
+
+model Zona {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @db.VarChar(25)
+  nombre    String   @db.VarChar(100)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("zonas")
+}
+
+model ZonaAeropuerto {
+  id          Int      @id @default(autoincrement())
+  idAeropuerto Int
+  codigo      String   @db.VarChar(25)
+  nombre      String   @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("zonas_aeropuerto")
+}
+
+model HorarioAeropuerto {
+  id              Int    @id @default(autoincrement())
+  idAeropuerto    Int
+  dia             String @db.VarChar(50)
+  horaIni         String @db.VarChar(4)
+  horaFin         String @db.VarChar(4)
+  veinticuatroHoras Boolean @default(false)
+
+  @@map("horarios_aeropuerto")
+}
+
+// ============================================================
+// MODULO: AEROLINEAS
+// ============================================================
+
+model Aerolinea {
+  id                  Int      @id @default(autoincrement())
+  codigo              String   @db.VarChar(25)
+  nombre              String?  @db.VarChar(100)
+  nit                 String   @db.VarChar(20)
+  direccion           String?  @db.VarChar(100)
+  telefono            String?  @db.VarChar(20)
+  fax                 String?  @db.VarChar(20)
+  idCiudad            Int?
+  idPais              Int?
+  nacional            Boolean  @default(true)
+  porRecargoNocturno  Decimal  @db.Decimal(18, 2)
+  horasGraciaParqueo  Decimal  @db.Decimal(18, 2)
+  horasGraciaHangar   Decimal  @db.Decimal(18, 2)
+  diasVctoFacturas    Int      @default(30)
+  centroCosto         String   @db.VarChar(16)
+  auxiliarAbierto     String   @db.VarChar(16)
+  cliente             String   @db.VarChar(16)
+  ctaAnticipo         String?  @db.VarChar(16)
+  esCharter           Boolean  @default(false)
+  tipoAviacion        Int?
+  codigoOACI          String?  @db.VarChar(10)
+  codigoIATA          String?  @db.VarChar(10)
+  factTasas           Int      @default(0)
+  activo              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("aerolineas")
+}
+
+model Aeronave {
+  id                Int      @id @default(autoincrement())
+  matricula         String   @db.VarChar(25)
+  idAerolinea       Int
+  idTipoAeronave    Int
+  pesoKilos         Decimal  @db.Decimal(18, 6)
+  pesoLibras        Decimal? @db.Decimal(18, 6)
+  nacional          Boolean  @default(true)
+  propietario       String   @db.VarChar(50)
+  aviacion          Int
+  capacidadPasajeros Int?
+  subAviacion       String?  @db.VarChar(25)
+  certExplotNac     Boolean  @default(false)
+  fechaKduKaIni     DateTime?
+  fechaKduKaFin     DateTime?
+  fechaRecibe       DateTime?
+  quienRecibe       String?  @db.VarChar(150)
+  activo            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("aeronaves")
+}
+
+model TipoAeronave {
+  id                Int      @id @default(autoincrement())
+  codigo            String   @db.VarChar(25)
+  descripcion       String?  @db.VarChar(100)
+  idFabricante      Int?
+  modelo            String?  @db.VarChar(100)
+  capacidadPasajeros Int?
+  totalTripulacion  Int?
+  peso              Decimal? @db.Decimal(18, 2)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("tipos_aeronave")
+}
+
+model Fabricante {
+  id            Int      @id @default(autoincrement())
+  codigo        String   @db.VarChar(10)
+  nombre        String   @db.VarChar(50)
+  nit           String?  @db.VarChar(25)
+  direccion     String?  @db.VarChar(80)
+  ciudad        String?  @db.VarChar(50)
+  telefono      String?  @db.VarChar(50)
+  fax           String?  @db.VarChar(50)
+  website       String?  @db.VarChar(60)
+  email         String?  @db.VarChar(60)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("fabricantes")
+}
+
+model ClaseAviacion {
+  id             Int    @id @default(autoincrement())
+  codigo         String @db.VarChar(25)
+  descripcion    String @db.VarChar(150)
+  claseSuperior  Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("clases_aviacion")
+}
+
+model PersonalAerolinea {
+  id             Int    @id @default(autoincrement())
+  identificacion String @db.VarChar(25)
+  nombre         String @db.VarChar(100)
+  idAerolinea    Int?
+  cargo          String @db.VarChar(100)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("personal_aerolinea")
+}
+
+model AerolineaConcepto {
+  id          Int @id @default(autoincrement())
+  idConcepto  Int
+  idAerolinea Int
+
+  @@map("aerolineas_conceptos")
+}
+
+model AerolineaConfig {
+  id            Int    @id @default(autoincrement())
+  idAerolinea   Int
+  idAeropuerto  Int
+  horarioUnico  Boolean @default(false)
+  horaValleIni  String? @db.VarChar(4)
+  horaValleFin  String? @db.VarChar(4)
+  aplicarDescHV Boolean @default(false)
+
+  @@map("aerolineas_config")
+}
+
+// ============================================================
+// MODULO: OPERACIONES
+// ============================================================
+
+model Itinerario {
+  id              Int      @id @default(autoincrement())
+  codAeropuerto   String   @db.VarChar(25)
+  codAerolinea    String   @db.VarChar(25)
+  idVuelo         Int?
+  numeroVuelo     String   @db.VarChar(25)
+  horaVuelo       DateTime
+  operacion       String   @db.VarChar(10)
+  matricula       String?  @db.VarChar(25)
+  aeropuertoDest  String   @db.VarChar(25)
+  ejecutado       Boolean  @default(false)
+  estado          String?  @db.VarChar(15)
+  observacion     String?  @db.VarChar(500)
+  tipoAeronave    String?  @db.VarChar(25)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("itinerarios")
+}
+
+model Vuelo {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.VarChar(25)
+  numeroVuelo String @db.VarChar(25)
+  idAerolinea Int
+  origen      Int?
+  destino     Int?
+  activo      Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("vuelos")
+}
+
+model PuertaEmbarque {
+  id          Int    @id @default(autoincrement())
+  idAeropuerto Int
+  codigo      String @db.VarChar(25)
+  descripcion String @db.VarChar(250)
+  activo      Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("puertas_embarque")
+}
+
+model Hangar {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.VarChar(25)
+  descripcion String? @db.VarChar(100)
+  ubicacion   String? @db.VarChar(100)
+  idAeropuerto Int
+  tipoZona    Int
+  zonaDef     Int?
+  genRecNoc   Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("hangares")
+}
+
+model ServicioOperacion {
+  id          Int      @id @default(autoincrement())
+  idOperacion Int
+  tipoServicio String   @db.VarChar(50)
+  fecha       DateTime?
+  valor       Decimal? @db.Decimal(18, 2)
+  observacion String?  @db.VarChar(500)
+  createdAt   DateTime @default(now())
+
+  @@map("servicios_operacion")
+}
+
+model RegistroPeso {
+  id          Int      @id @default(autoincrement())
+  idOperacion Int
+  peso        Decimal  @db.Decimal(18, 2)
+  fecha       DateTime @default(now())
+
+  @@map("registros_peso")
+}
+
+model AsignacionPuertaVuelo {
+  id          Int      @id @default(autoincrement())
+  idOperacion Int?
+  idPuerta    Int?
+  fecha       DateTime?
+  horaIni     DateTime?
+  horaFin     DateTime?
+
+  @@map("asignaciones_puerta_vuelo")
+}
+
+model NotaOperacion {
+  id          BigInt   @id @default(autoincrement())
+  idOperacion BigInt?
+  nota        String?  @db.Text
+  usuario     String?  @db.VarChar(50)
+  fecha       DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("notas_operacion")
+}
+
+// ============================================================
+// MODULO: TARIFAS
+// ============================================================
+
+model Concepto {
+  id                Int      @id @default(autoincrement())
+  codigo            String   @db.VarChar(25)
+  nombre            String   @db.VarChar(100)
+  descripcion       String?  @db.VarChar(50)
+  tipoTarifa        Int
+  activo            Boolean  @default(true)
+  idGrupoConcepto   Int?
+  aplicaImpuesto    Boolean  @default(false)
+  porcentImpuestoNal Decimal? @db.Decimal(18, 6)
+  porcentImpuestoInt Decimal? @db.Decimal(18, 6)
+  valorUnitario     Decimal? @db.Decimal(18, 4)
+  valorFijoPeriodo  Decimal? @db.Decimal(18, 4)
+  modoPresentFactura String? @db.Char(1)
+  abrevNac          String?  @db.VarChar(25)
+  abrevInt          String?  @db.VarChar(25)
+  tipoReporte       Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("conceptos")
+}
+
+model GrupoConcepto {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.VarChar(25)
+  descripcion String @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("grupos_concepto")
+}
+
+model TipoOperacion {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.VarChar(25)
+  nombre      String @db.VarChar(100)
+  idConcepto  Int
+  tipoTarifa  Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tipos_operacion")
+}
+
+model TarifaOperacion {
+  id                      Int      @id @default(autoincrement())
+  codigo                  String   @db.VarChar(25)
+  idTipoOperacion         Int
+  tarifaKiloLocal         Decimal  @db.Decimal(18, 10)
+  tarifaKiloExtranjero    Decimal  @db.Decimal(18, 10)
+  fechaInicial            DateTime
+  rango                   String   @db.Char(1)
+  rangoInicial            Decimal? @db.Decimal(18, 2)
+  rangoFinal              Decimal? @db.Decimal(18, 2)
+  idAeropuerto            Int?
+  tarifaLocalSinAjuste    Decimal? @db.Decimal(18, 10)
+  tarifaExtranjeroSinAjuste Decimal? @db.Decimal(18, 10)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@map("tarifas_operacion")
+}
+
+model TarifaAerolinea {
+  id                   Int      @id @default(autoincrement())
+  idTarifaOperacion    Int
+  idAerolinea          Int
+  tarifaKiloLocal      Decimal  @db.Decimal(18, 10)
+  tarifaKiloExtranjero  Decimal  @db.Decimal(18, 10)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("tarifas_aerolinea")
+}
+
+model Impuesto {
+  codigo      String @id @db.VarChar(25)
+  nombre      String @db.VarChar(200)
+  porcentaje  Decimal? @db.Decimal(18, 6)
+  cuenta      String @db.VarChar(16)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("impuestos")
+}
+
+// ============================================================
+// MODULO: FACTURACION
+// ============================================================
+
+model Factura {
+  id            BigInt   @id @default(autoincrement())
+  fuente        String?  @db.VarChar(2)
+  documento     String?  @db.VarChar(10)
+  fecha         DateTime?
+  idAerolinea   Int?
+  cliente       String?  @db.VarChar(25)
+  tercero       String?  @db.VarChar(25)
+  tipoFactura   Int?
+  descripcion   String?  @db.VarChar(1000)
+  idMoneda      Int?
+  totalNeto     Decimal? @db.Decimal(19, 4)
+  totalIVA      Decimal? @db.Decimal(19, 4)
+  totalRete     Decimal? @db.Decimal(19, 4)
+  totalAnticipo Decimal? @db.Decimal(19, 4)
+  total         Decimal? @db.Decimal(19, 4)
+  totalMoneda   Decimal? @db.Decimal(19, 4)
+  tasaCambio    Decimal? @db.Decimal(19, 4)
+  usuario       String?  @db.VarChar(50)
+  bu            String?  @db.VarChar(25)
+  estado        String?  @db.Char(2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("facturas")
+}
+
+model FacturaDetalle {
+  id            BigInt   @id @default(autoincrement())
+  idFactura     BigInt?
+  fuente        String?  @db.VarChar(2)
+  documento     String?  @db.VarChar(10)
+  idConcepto    Int?
+  idTipoOper    Int?
+  descripcion   String?  @db.VarChar(1000)
+  tercero       String?  @db.VarChar(25)
+  cantidad      Int?
+  valorConcepto Decimal? @db.Decimal(19, 4)
+  iva           Decimal? @db.Decimal(19, 4)
+  rete          Decimal? @db.Decimal(19, 4)
+  total         Decimal? @db.Decimal(19, 4)
+  totalMoneda   Decimal? @db.Decimal(19, 4)
+  tasaCambio    Decimal? @db.Decimal(19, 4)
+  bu            String?  @db.VarChar(25)
+  descConcepto  String?  @db.VarChar(200)
+
+  @@map("facturas_detalle")
+}
+
+model FacturaPago {
+  id            BigInt   @id @default(autoincrement())
+  idFactura     BigInt?
+  fuente        String?  @db.VarChar(2)
+  documento     String?  @db.VarChar(10)
+  tipoPago      String?  @db.Char(5)
+  cuenta        String?  @db.VarChar(16)
+  descripcion   String?  @db.VarChar(1000)
+  tercero       String?  @db.VarChar(25)
+  total         Decimal? @db.Decimal(19, 4)
+  totalMoneda   Decimal? @db.Decimal(19, 4)
+  tasaCambio    Decimal? @db.Decimal(19, 4)
+  bu            String?  @db.VarChar(25)
+
+  @@map("facturas_pagos")
+}
+
+model FacturaImpuesto {
+  id            Int    @id @default(autoincrement())
+  idFactura     BigInt
+  codigoImpuesto String @db.VarChar(25)
+  base          Decimal @db.Decimal(18, 2)
+  valor         Decimal @db.Decimal(18, 2)
+  porcentaje    Decimal @db.Decimal(18, 6)
+
+  @@map("facturas_impuestos")
+}
+
+model NotaContable {
+  id          BigInt   @id @default(autoincrement())
+  fuente      String?  @db.VarChar(2)
+  documento   String?  @db.VarChar(10)
+  fecha       DateTime?
+  concepto    String?  @db.VarChar(500)
+  usuario     String?  @db.VarChar(50)
+  bu          String?  @db.VarChar(25)
+  estado      String?  @db.VarChar(25)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("notas_contables")
+}
+
+model AcuerdoPago {
+  id            Int    @id @default(autoincrement())
+  codAerolinea  String @db.VarChar(25)
+  fuente        String @db.VarChar(2)
+  documento     String @db.VarChar(10)
+  fechaCreacion DateTime?
+  fechaInicio   DateTime?
+  fechaVenc     DateTime?
+  valor         Decimal? @db.Decimal(19, 4)
+  estado        String? @db.VarChar(25)
+  observacion   String? @db.VarChar(200)
+  usuario       String  @db.VarChar(50)
+  bu            String  @db.VarChar(25)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("acuerdos_pago")
+}
+
+model FuenteFacturacion {
+  id             Int    @id @default(autoincrement())
+  idAeropuerto   Int
+  fuenteContado  String? @db.VarChar(2)
+  fuenteCredito  String? @db.VarChar(2)
+  serieContado   String? @db.VarChar(2)
+  serieCredito   String? @db.VarChar(2)
+  fuenteNota     String? @db.VarChar(2)
+  serieNota      String? @db.VarChar(2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("fuentes_facturacion")
+}
+
+model ConfigFacturacion {
+  id             Int    @id @default(autoincrement())
+  idCliente      String @db.VarChar(25)
+  nombre         String @db.VarChar(50)
+  tipoFacturacion String @db.VarChar(25)
+  separaFacturas Boolean @default(false)
+
+  @@map("configuracion_facturacion")
+}
+
+model MovimientoFacturacion {
+  id          BigInt   @id @default(autoincrement())
+  tipo        String   @db.VarChar(20)
+  idOperacion BigInt?
+  idConcepto  Int?
+  idAerolinea Int?
+  idAeropuerto Int?
+  idHangar    Int?
+  idPuerta    Int?
+  idServicio  Int?
+  idTasa      Int?
+  idPasajero  Int?
+  horaIni     DateTime?
+  horaFin     DateTime?
+  peso        Decimal? @db.Decimal(18, 2)
+  tarifa      Decimal? @db.Decimal(18, 10)
+  cantidad    Int?
+  valor       Decimal? @db.Decimal(18, 2)
+  facturado   Boolean  @default(false)
+  idFactura   BigInt?
+  fecha       DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([tipo])
+  @@index([idOperacion])
+  @@index([idFactura])
+  @@map("movimientos_facturacion")
+}
+
+model Folio {
+  id          BigInt  @id @default(autoincrement())
+  idAeropuerto Int?
+  idAerolinea Int?
+  fecha       DateTime?
+  estado      Int?
+  observacion String? @db.VarChar(1000)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("folios")
+}
+
+model FolioDetalle {
+  id         BigInt @id @default(autoincrement())
+  idFolio    BigInt
+  idLiquidacion Int
+
+  @@map("folios_detalle")
+}
+
+// ============================================================
+// MODULO: LIQUIDACIONES
+// ============================================================
+
+model Liquidacion {
+  id          Int    @id @default(autoincrement())
+  codigo      String @unique @db.VarChar(25)
+  idAeropuerto Int?
+  fecha       DateTime?
+  idAerolinea Int?
+  estado      String? @db.VarChar(100)
+  conCargoA   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("liquidaciones")
+}
+
+model ItemLiquidacion {
+  id                    Int      @id @default(autoincrement())
+  idLiquidacion         Int?
+  codigo                String?  @db.VarChar(25)
+  idAeronave            Int?
+  matricula             String?  @db.VarChar(25)
+  vuelo                 String?  @db.VarChar(25)
+  idAeropuertoDestNac   Int?
+  idAeropuertoDestInt   Int?
+  totalEmbNac           Decimal? @db.Decimal(18, 4)
+  transitoNacional      Decimal? @db.Decimal(18, 4)
+  exentosNacional       Decimal? @db.Decimal(18, 4)
+  totalPaganTasaNac     Decimal? @db.Decimal(18, 4)
+  pasajerosDolaresInt   Decimal? @db.Decimal(18, 4)
+  pasajerosPesosInt     Decimal? @db.Decimal(18, 4)
+  totalPasajerosInt     Decimal? @db.Decimal(18, 4)
+  exentosInternacional  Decimal? @db.Decimal(18, 4)
+  transitoInternacional Decimal? @db.Decimal(18, 4)
+  totalEmbInt           Decimal? @db.Decimal(18, 4)
+  totalPasajeros        Decimal? @db.Decimal(18, 4)
+  tasaNacContado        Decimal? @db.Decimal(18, 4)
+  pasajerosPesosIntCont Decimal? @db.Decimal(18, 4)
+  pasajerosDolaresIntCont Decimal? @db.Decimal(18, 4)
+
+  @@map("items_liquidacion")
+}
+
+model PasajeroNacional {
+  id                  Int    @id @default(autoincrement())
+  idLiquidacion       Int
+  matricula           String @db.VarChar(12)
+  vuelo               String @db.VarChar(4)
+  idAeropuertoDestino  Int
+  totalPasajero       Int
+  idAerolinea         Int
+  fecha               DateTime
+  idTipoPasajero      Int
+  idClasePasajero     Int?
+
+  @@map("pasajeros_nacionales")
+}
+
+model PasajeroInternacional {
+  id                  Int    @id @default(autoincrement())
+  idLiquidacion       Int
+  matricula           String @db.VarChar(12)
+  vuelo               String @db.VarChar(4)
+  idAeropuertoDestino  Int?
+  totalPasajero       Int
+  idAerolinea         Int?
+  fecha               DateTime
+  pasajDolares        Float
+  pasajPesos          Float
+
+  @@map("pasajeros_internacionales")
+}
+
+model Tasa {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.VarChar(25)
+  nombre      String @db.VarChar(100)
+  descripcion String? @db.VarChar(200)
+  valor       Decimal @db.Decimal(18, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tasas")
+}
+
+model TipoPasajero {
+  id             Int    @id @default(autoincrement())
+  codigo         String @db.VarChar(2)
+  nombre         String @db.VarChar(100)
+  exento         Boolean @default(false)
+  idClasePasajero Int?
+  paxNoFisico    Boolean @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("tipos_pasajero")
+}
+
+model ClasePasajero {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.Char(3)
+  nombre      String @db.VarChar(25)
+  descripcion String @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("clases_pasajero")
+}
+
+// ============================================================
+// MODULO: SEGURIDAD
+// ============================================================
+
+model Usuario {
+  id              Int      @id @default(autoincrement())
+  username        String   @unique @db.VarChar(50)
+  password        String   @db.VarChar(500)
+  nombre          String?  @db.VarChar(100)
+  email           String?  @db.VarChar(100)
+  activo          Boolean  @default(true)
+  bloqueado       Boolean  @default(false)
+  idPerfil        Int?
+  fechaVence      DateTime?
+  ultimoAcceso    DateTime?
+  intentosFallidos Int?   @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("usuarios")
+}
+
+model Perfil {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.VarChar(25)
+  nombre      String @db.VarChar(100)
+  descripcion String? @db.VarChar(200)
+  activo      Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("perfiles")
+}
+
+model PermisoPerfil {
+  id       Int   @id @default(autoincrement())
+  idPerfil Int
+  recurso  String @db.VarChar(100)
+  permiso  Int?
+
+  @@map("permisos_perfil")
+}
+
+model MenuOpcion {
+  id          Int    @id @default(autoincrement())
+  idPadre     Int?
+  nombre      String @db.VarChar(100)
+  descripcion String? @db.VarChar(200)
+  ruta        String? @db.VarChar(100)
+  icono       String? @db.VarChar(50)
+  orden       Int?
+  activo      Boolean @default(true)
+
+  @@map("menu_opciones")
+}
+
+model SesionUsuario {
+  id          Int      @id @default(autoincrement())
+  idUsuario   Int
+  idAeropuerto Int?
+  fecha       DateTime @default(now())
+  ip          String?  @db.VarChar(50)
+
+  @@map("sesiones_usuario")
+}
+
+model AccesoAeropuerto {
+  id          Int @id @default(autoincrement())
+  idUsuario   Int
+  idAeropuerto Int?
+
+  @@map("accesos_aeropuerto")
+}
+
+model UsuarioCuenta {
+  id          Int    @id @default(autoincrement())
+  idUsuario   Int
+  cuenta      String @db.VarChar(16)
+  descripcion String? @db.VarChar(100)
+
+  @@map("usuarios_cuentas")
+}
+
+// ============================================================
+// MODULO: CONFIGURACION
+// ============================================================
+
+model ParametroSistema {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.VarChar(50)
+  nombre      String @db.VarChar(100)
+  descripcion String? @db.VarChar(500)
+  valor       String? @db.VarChar(500)
+  tipo        String? @db.VarChar(50)
+  modulo      String? @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("parametros_sistema")
+}
+
+model IndicadorEconomico {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.VarChar(25)
+  descripcion String @db.VarChar(100)
+  fecha       DateTime?
+  valor       Decimal @db.Decimal(18, 2)
+  fechaProx   DateTime?
+  valorProx   Decimal @db.Decimal(18, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("indicadores_economicos")
+}
+
+model CodigoAeronautico {
+  id           BigInt @id @default(autoincrement())
+  codigo       String @db.VarChar(50)
+  descripcion  String @db.VarChar(150)
+  tipo         Int
+  createdAt    DateTime @default(now())
+
+  @@map("codigos_aeronauticos")
+}
+
+model ServicioAereo {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.VarChar(25)
+  nombre      String @db.VarChar(100)
+  descripcion String? @db.VarChar(200)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("servicios_aereos")
+}
+
+model Secuencia {
+  id          Int    @id @default(autoincrement())
+  nombre      String @db.VarChar(100)
+  consecutivo Int    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("secuencias")
+}
+
+model Mensaje {
+  id          Int      @id @default(autoincrement())
+  codigo      String   @db.VarChar(50)
+  titulo      String?  @db.VarChar(200)
+  mensaje     String?  @db.Text
+  tipo        String?  @db.VarChar(50)
+  leido       Boolean  @default(false)
+  idUsuario   Int?
+  fecha       DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("mensajes")
+}
+
+model TipoEvento {
+  codigo      String  @id @db.VarChar(10)
+  nombre      String? @db.VarChar(50)
+  descripcion String? @db.VarChar(200)
+  createdAt   DateTime @default(now())
+
+  @@map("tipos_evento")
+}
+
+model Evento {
+  id           Int    @id @default(autoincrement())
+  codigoTipo   String @db.VarChar(10)
+  codigo       String @db.VarChar(10)
+  nombre       String? @db.VarChar(150)
+  descripcion  String? @db.VarChar(200)
+  deshabilitar Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("eventos")
+}
+
+// ============================================================
+// MODULO: AUDITORIA
+// ============================================================
+
+model BitacoraError {
+  id          Int      @id @default(autoincrement())
+  fecha       DateTime @default(now())
+  modulo      String?  @db.VarChar(200)
+  error       String?  @db.Text
+  usuario     String?  @db.VarChar(50)
+  ip          String?  @db.VarChar(50)
+
+  @@map("bitacora_errores")
+}
+
+model AuditoriaOperacion {
+  id          Int      @id @default(autoincrement())
+  fecha       DateTime @default(now())
+  usuario     String?  @db.VarChar(50)
+  accion      String?  @db.VarChar(200)
+  tabla       String?  @db.VarChar(100)
+  registroId  String?  @db.VarChar(50)
+  detalle     String?  @db.Text
+  ip          String?  @db.VarChar(50)
+
+  @@map("auditoria_operaciones")
+}
+
+// ============================================================
+// PERIODOS
+// ============================================================
+
+model Periodo {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.VarChar(25)
+  fechaIni    DateTime?
+  fechaFin    DateTime?
+  estado      String @db.Char(1) @default("A")
+  usuario     String? @db.VarChar(50)
+  fechaCierre DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("periodos")
+}
+
+model PeriodoAeropuerto {
+  idAeropuerto Int
+  idPeriodo    Int
+  abierto      String @db.VarChar(1) @default("S")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@id([idAeropuerto, idPeriodo])
+  @@map("periodos_aeropuerto")
+}
+
+model DiaAeropuerto {
+  idPeriodo    Int
+  dia          DateTime
+  abierto      String @db.VarChar(1) @default("S")
+  idAeropuerto Int?
+
+  @@id([idPeriodo, dia])
+  @@map("dias_aeropuerto")
+}
+
+model DiaFeriado {
+  id    Int  @id @default(autoincrement())
+  fecha DateTime?
+
+  @@map("dias_feriados")
+}
+
+// ============================================================
+// REPORTES / APLICACIONES
+// ============================================================
+
+model Reporte {
+  id          Int    @id @default(autoincrement())
+  codigo      String @db.VarChar(50)
+  nombre      String @db.VarChar(200)
+  descripcion String? @db.VarChar(500)
+  idCategoria Int?
+  ruta        String? @db.VarChar(500)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("reportes")
+}
+
+model CategoriaReporte {
+  id     Int    @id @default(autoincrement())
+  nombre String @db.VarChar(100)
+
+  @@map("categorias_reporte")
+}
+
+model Aplicacion {
+  id                  Int    @id @default(autoincrement())
+  nombre              String @db.VarChar(30)
+  habilitar           Boolean @default(false)
+  bloqueaBackend      Boolean @default(false)
+  bloqueaFrontend     Boolean @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("aplicaciones")
+}
