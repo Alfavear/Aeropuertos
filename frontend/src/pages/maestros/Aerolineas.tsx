@@ -19,29 +19,25 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useAerolineas } from '@/hooks/modules'
+import type { Aerolinea } from '@/types'
 
 const aerolineaSchema = z.object({
   codigo: z.string().min(1, 'El código es requerido'),
   nombre: z.string().min(1, 'El nombre es requerido'),
 })
 
-interface AerolineaItem {
-  id: number
-  codigo: string
-  nombre: string
-  activo: boolean
-}
-
-const mockData: AerolineaItem[] = [
-  { id: 1, codigo: 'LA', nombre: 'LATAM Airlines Perú', activo: true },
-  { id: 2, codigo: 'LP', nombre: 'LATAM Airlines Perú (Cargo)', activo: true },
-  { id: 3, codigo: '2K', nombre: 'Aerolínea del Sur', activo: false },
-]
+type FormValues = z.infer<typeof aerolineaSchema>
 
 export default function Aerolineas() {
-  const [data, setData] = useState<AerolineaItem[]>(mockData)
+  const aerolineas = useAerolineas()
+  const { data = [], isLoading, error } = aerolineas.useList()
+  const createMutation = aerolineas.useCreate()
+  const updateMutation = aerolineas.useUpdate()
+  const deleteMutation = aerolineas.useRemove()
+
   const [open, setOpen] = useState(false)
-  const [editing, setEditing] = useState<AerolineaItem | null>(null)
+  const [editing, setEditing] = useState<Aerolinea | null>(null)
   const [search, setSearch] = useState('')
 
   const {
@@ -49,7 +45,7 @@ export default function Aerolineas() {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm({
+  } = useForm<FormValues>({
     resolver: zodResolver(aerolineaSchema),
     defaultValues: { codigo: '', nombre: '' },
   })
@@ -60,25 +56,25 @@ export default function Aerolineas() {
       item.codigo.toLowerCase().includes(search.toLowerCase()),
   )
 
-  const onSubmit = (form: { codigo: string; nombre: string }) => {
+  const onSubmit = async (form: FormValues) => {
     if (editing) {
-      setData(data.map((d) => (d.id === editing.id ? { ...d, ...form } : d)))
+      await updateMutation.mutateAsync({ id: editing.id, data: form })
     } else {
-      setData([...data, { ...form, id: Date.now(), activo: true }])
+      await createMutation.mutateAsync(form)
     }
     setOpen(false)
     setEditing(null)
     reset({ codigo: '', nombre: '' })
   }
 
-  const handleEdit = (item: AerolineaItem) => {
+  const handleEdit = (item: Aerolinea) => {
     setEditing(item)
     reset({ codigo: item.codigo, nombre: item.nombre })
     setOpen(true)
   }
 
-  const handleDelete = (id: number) => {
-    setData(data.filter((d) => d.id !== id))
+  const handleDelete = async (id: number) => {
+    await deleteMutation.mutateAsync(id)
   }
 
   const handleAdd = () => {
@@ -94,71 +90,83 @@ export default function Aerolineas() {
           <h2 className="text-2xl font-bold text-gray-900">Aerolíneas</h2>
           <p className="text-sm text-gray-500">Gestión de aerolíneas</p>
         </div>
-        <Button onClick={handleAdd}>
+        <Button onClick={handleAdd} disabled={createMutation.isPending || updateMutation.isPending}>
           <Plus className="h-4 w-4" />
           Nueva aerolínea
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              placeholder="Buscar aerolíneas..."
-              className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.codigo}</TableCell>
-                  <TableCell>{item.nombre}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        item.activo
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {item.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+      {isLoading && (
+        <div className="flex items-center justify-center h-64">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+        </div>
+      )}
+      {error && (
+        <div className="flex items-center justify-center h-64 text-rose-500">
+          Error al cargar datos: {(error as Error).message}
+        </div>
+      )}
+      {!isLoading && !error && (
+        <Card>
+          <CardHeader>
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Buscar aerolíneas..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-gray-500">
-                    No se encontraron aerolíneas
-                  </TableCell>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.codigo}</TableCell>
+                    <TableCell>{item.nombre}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                          item.activo
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {item.activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-gray-500">
+                      No se encontraron aerolíneas
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={open} onOpenChange={(v) => { if (!v) { setOpen(false); setEditing(null) } }}>
         <DialogContent>

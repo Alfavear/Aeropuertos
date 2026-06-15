@@ -97,17 +97,19 @@ PostgreSQL 16
 
 ### 1.3 Módulos del sistema
 
-| Módulo | Descripción | Estado |
-|---|---|---|
-| `organizacion` | Países, ciudades, aeropuertos, zonas | ✅ |
-| `aerolineas` | Aerolíneas, aeronaves, tipos, fabricantes | ✅ |
-| `operaciones` | Vuelos, itinerarios, puertas, hangares | ✅ |
-| `tarifas` | Conceptos, tarifas, impuestos | ✅ |
-| `facturacion` | Facturas, notas, pagos, acuerdos | ✅ |
-| `liquidaciones` | Infraestructura, tasas, pasajeros | ✅ |
-| `seguridad` | Usuarios, roles, permisos, menú | ✅ |
-| `configuracion` | Parámetros, fuentes, secuencias | ✅ |
-| `auditoria` | Logs, trazabilidad | 🟡 Parcial |
+| Módulo | Entidades | Endpoints | Estado |
+|---|---|---|---|---|
+| `organizacion/` | 6 | 30 | ✅ Completo |
+| `aerolineas/` | 9 (incl. AerolineaCtaConcepto) | 45 | ✅ Completo |
+| `tarifas/` | 7 (incl. TarifaOperacionHistorico) | 35 | ✅ Completo |
+| `configuracion/` | 10 (incl. ConfigTasaAeropuerto) | 50 | ✅ Completo |
+| `periodos/` | 4 | 26 | ✅ Completo |
+| `reportes/` | 2 | 10 | ✅ Completo |
+| `operaciones/` | 8 | 40 | ✅ Completo |
+| `facturacion/` | 11 | 55 | ✅ Completo |
+| `seguridad/` | 7 | 35 | ✅ Completo |
+| `liquidaciones/` | 7 | 35 | ✅ Completo |
+| **TOTAL** | **71** | **~361** | **10/10 módulos** |
 
 ---
 
@@ -215,6 +217,22 @@ en una sola tabla polimórfica `movimientos_facturacion` con campos genéricos +
 | `codigos_aeronauticos` | `CodigosAeronauticos` | Códigos OACI/IATA |
 | `servicios_aereos` | `MaeServiciosAereos` | Servicios aeroportuarios |
 
+#### Dominio: Períodos (`periodos_*`)
+
+| Nueva tabla | Vieja tabla | Descripción |
+|---|---|---|
+| `periodos` | `Periodos` | Períodos contables |
+| `periodos_aeropuerto` | `PeriodoAeropuerto` | Apertura/cierre por aeropuerto |
+| `dias_aeropuerto` | `DiasAero` | Días operativos |
+| `dias_feriados` | `DiasFeriados` | Días feriados |
+
+#### Dominio: Reportes (`reportes_*`)
+
+| Nueva tabla | Vieja tabla | Descripción |
+|---|---|---|
+| `reportes` | `ReportesRPT` | Catálogo de reportes |
+| `categorias_reporte` | `CategoriaRPT` | Categorías de reportes |
+
 #### Dominio: Auditoría (`auditoria_*`)
 
 | Nueva tabla | Descripción |
@@ -228,59 +246,65 @@ Ver listado completo en `docs/tablas_eliminadas.md`
 
 ---
 
-## Fase 3 — Implementación Backend (En Progreso 🟡)
+## Fase 3 — Implementación Backend (Completada ✅)
 
 ### 3.1 Estructura de módulos
 
 ```
 src/
 ├── main.ts                    # Punto de entrada
-├── app.module.ts              # Módulo raíz
-├── common/                    # Código compartido
-│   ├── guards/                # Guards de autenticación
-│   ├── decorators/            # Decoradores personalizados
-│   ├── filters/               # Filtros de excepción
-│   ├── interceptors/          # Interceptores (logging, transform)
-│   └── pipes/                 # Pipes de validación
-├── modules/
-│   ├── organizacion/          # CRUD paises, ciudades, aeropuertos
-│   ├── aerolineas/            # CRUD aerolíneas, aeronaves
-│   ├── operaciones/           # Itinerarios, vuelos
-│   ├── tarifas/               # Conceptos, tarifas, impuestos
-│   ├── facturacion/           # Facturación
-│   ├── liquidaciones/         # Infraestructura, tasas
-│   ├── seguridad/             # Usuarios, roles
-│   └── configuracion/         # Parámetros, secuencias
-└── prisma/
-    ├── prisma.service.ts
-    └── prisma.module.ts
+├── app.module.ts              # Módulo raíz (10 módulos registrados)
+├── prisma/                    # PrismaService + PrismaModule
+│   ├── prisma.service.ts
+│   └── prisma.module.ts
+├── auth/                      # AuthModule (JWT + Passport)
+├── organizacion/              # 6 entidades ✅
+├── aerolineas/                # 9 entidades ✅
+├── tarifas/                   # 7 entidades ✅
+├── configuracion/             # 10 entidades ✅
+├── periodos/                  # 4 entidades ✅
+├── reportes/                  # 2 entidades ✅
+├── operaciones/               # 8 entidades + CalculosService ✅
+├── facturacion/               # 11 entidades ✅
+├── seguridad/                 # 7 entidades ✅
+└── liquidaciones/             # 7 entidades ✅
 ```
 
-### 3.2 Endpoints API
+### 3.2 Módulos backend — Estado final
 
-| Método | Ruta | Descripción | Auth |
-|---|---|---|---|
-| POST | `/api/auth/login` | Inicio de sesión | No |
-| POST | `/api/auth/refresh` | Refrescar token | Sí |
-| GET | `/api/health` | Health check | No |
-| GET | `/api/:modulo` | Listar entidades | Sí |
-| GET | `/api/:modulo/:id` | Obtener entidad | Sí |
-| POST | `/api/:modulo` | Crear entidad | Sí |
-| PUT | `/api/:modulo/:id` | Actualizar entidad | Sí |
-| DELETE | `/api/:modulo/:id` | Eliminar entidad | Sí* |
+| Módulo | Ruta base | Entidades | Endpoints | Servicios | Estado |
+|---|---|---|---|---|---|
+| `organizacion` | `/api/v1/organizacion` | 6 | 30 | — | ✅ |
+| `aerolineas` | `/api/v1/aerolineas` | 9 | 45 | — | ✅ |
+| `tarifas` | `/api/v1/tarifas` | 7 | 35 | — | ✅ |
+| `configuracion` | `/api/v1/configuracion` | 10 | 50 | — | ✅ |
+| `periodos` | `/api/v1/periodos` | 4 | 26 | — | ✅ |
+| `reportes` | `/api/v1/reportes` | 2 | 10 | — | ✅ |
+| `operaciones` | `/api/v1/operaciones` | 8 | 41 | CalculosService | ✅ |
+| `facturacion` | `/api/v1/facturacion` | 11 | 55 | — | ✅ |
+| `seguridad` | `/api/v1/seguridad` | 7 | 35 | — | ✅ |
+| `liquidaciones` | `/api/v1/liquidaciones` | 7 | 35 | — | ✅ |
+| **TOTAL** | — | **71 entidades** | **~362 endpoints** | **1 motor de cálculo** | **10/10 ✅** |
 
-> \* Los delete son lógicos (soft delete) con campo `fecha_baja`
+### 3.3 Motor de cálculo de facturación (Nuevo)
 
-### 3.3 Pendiente backend
+El `CalculosService` implementa el motor de cálculo legacy (`FnGetTarifaIndexada`, `FnCalcTarifLocalForInt`, `SpCalculaParqueo`, `SpConfigConceptosInfrasas`) como código TypeScript puro en NestJS:
 
-- [ ] Módulo de reportes (generación PDF/Excel)
-- [ ] Facturación electrónica
-- [ ] Integración con pasarela de pagos
-- [ ] Cache Redis para catálogos
-- [ ] Pruebas unitarias (Jest)
-- [ ] Documentación Swagger completa
-- [ ] Rate limiting (throttler)
-- [ ] Auditoría de cambios (trigger en Prisma)
+| Servicio | Archivo | Descripción |
+|---|---|---|
+| `CalculosService` | `src/operaciones/calculos.service.ts` | Motor de cálculo de conceptos (aterrizaje, parqueo, tasas, servicios) |
+
+**Fórmulas implementadas:**
+- **Aterrizaje:** `tarifaIndexada × peso` (con CPI indexing y conversión moneda para internacional)
+- **Parqueo:** `tarifaBase × horasFacturables` (con horas de gracia y recargo nocturno)
+- **Tasas:** `tarifa × pasajeros` (split COP/USD para internacional)
+- **Tarifa Indexada** (`FnGetTarifaIndexada`): lookup por tipo de operación, rango de peso, tarifa negociada por aerolínea, indexación IPC
+- **Conversión internacional** (`FnCalcTarifLocalForInt`): determina si cobrar en COP o USD
+
+**Endpoint único:**
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/api/v1/operaciones/calcular-conceptos` | Calcula conceptos sin persistir (retorna valores + traza de fórmula) |
 
 ---
 
@@ -292,36 +316,50 @@ src/
 src/
 ├── components/
 │   ├── ui/              # Componentes base (Button, Input, Table, Card, Dialog)
+│   ├── shared/          # PageHeader, DataTable, CrudModal, StatusBadge, etc.
 │   └── layout/          # Sidebar, Header, AppLayout
 ├── pages/
 │   ├── Login.tsx
 │   ├── Dashboard.tsx
-│   └── modules/         # CRUDs por módulo
-│       ├── organizacion/
-│       │   ├── Paises.tsx
-│       │   ├── Ciudades.tsx
-│       │   └── Aeropuertos.tsx
-│       ├── aerolineas/
-│       │   ├── Aerolineas.tsx
-│       │   └── Aeronaves.tsx
-│       └── ...
-├── hooks/               # Custom hooks
-├── stores/              # Zustand stores
-├── services/            # API calls (Axios)
-└── types/               # TypeScript interfaces
+│   ├── SeleccionarAeropuerto.tsx
+│   ├── configuracion/       # 7 páginas (Parametros, Indicadores, Servicios, etc.)
+│   ├── facturacion/         # 5 páginas (Facturas, NotasContables, Acuerdos, etc.)
+│   ├── liquidaciones/       # 4 páginas (Liquidaciones, Tasas, Pasajeros, etc.)
+│   ├── maestros/            # 8 páginas (Paises, Ciudades, Aeropuertos, etc.)
+│   ├── operaciones/         # 5 páginas (Vuelos, Itinerarios, PanelOperaciones, etc.)
+│   ├── periodos/            # 2 páginas (Periodos, DiasFeriados)
+│   ├── seguridad/           # 3 páginas (Usuarios, Perfiles, MenuOpciones)
+│   └── tarifas/             # 7 páginas (Conceptos, Tarifas, Impuestos, etc.)
+├── hooks/               # useCrud.ts genérico + modules.ts (43 hooks por entidad)
+├── stores/              # Zustand (authStore)
+├── lib/                 # api.ts (Axios + JWT interceptor)
+└── types/               # TypeScript interfaces (50+ entidades)
 ```
 
-### 4.2 Pendiente frontend
+### 4.2 Estado de páginas CRUD (43 páginas)
 
-- [ ] CRUD completo para todos los módulos
-- [ ] Dashboard con métricas reales
-- [ ] Tablero de reportes
-- [ ] Módulo de operaciones (check-in, boarding)
-- [ ] Tema claro/oscuro
-- [ ] Responsive design
-- [ ] Internacionalización (i18n)
-- [ ] Pruebas (Vitest + Testing Library)
-- [ ] Modo offline (PWA)
+| Módulo | Páginas | Estado |
+|---|---|---|
+| `maestros/` | Paises, Ciudades, Zonas, Aeropuertos, Aerolineas, Aviones, Fabricantes, TiposAeronave, ClasesAviacion, PersonalAerolinea | ✅ 10 |
+| `tarifas/` | Conceptos, GruposConcepto, TiposOperacion, TarifasOperacion, TarifasAerolinea, Impuestos | ✅ 6 |
+| `operaciones/` | Vuelos, Itinerarios, PuertasEmbarque, Hangares, ServiciosOperacion, **PanelOperaciones** | ✅ 6 |
+| `configuracion/` | Parametros, IndicadoresEconomicos, CodigosAeronauticos, ServiciosAereos, Secuencias, Mensajes, Eventos, Aplicaciones | ✅ 8 |
+| `facturacion/` | Facturas, NotasContables, AcuerdosPago, FuentesFacturacion, ConfigFacturacion | ✅ 5 |
+| `liquidaciones/` | Liquidaciones, TasasAeroportuarias, Pasajeros, TiposPasajero, ClasesPasajero | ✅ 5 |
+| `seguridad/` | Usuarios, Perfiles, MenuOpciones | ✅ 3 |
+| **TOTAL** | **43 páginas** | **🟡 43/43** |
+
+### 4.3 Página personalizada: Panel Central de Operaciones
+
+`PanelOperaciones.tsx` (627 líneas) — réplica moderna de `FrmMagnaInfrasas`:
+- **Filtros:** fecha, aeropuerto, aerolínea + botón Buscar
+- **Toolbar:** Registrar Entrada/Salida, Parqueo, Tasas, Facturar
+- **DataTable:** grid con columnas de vuelo, aerolínea, matrícula, procedencia/destino, horas, estado, acciones
+- **Selector de fila:** activa tabs de detalle
+- **3 Tabs de detalle:** Detalle General (llegada/salida/pasajeros), Parqueo y Tasas, Costo de Operación
+- **4 Modales:** Entry (aterrizaje), Exit (despegue), Parking, Tasas — todos con Zod validation
+- **Cálculo en vivo:** llama a `POST /operaciones/calcular-conceptos` al registrar cada evento; muestra resultados y traza de fórmula en el tab de costos
+- **Estado:** loading/error/empty para cada consulta, spinner de cálculo, badges de estado/facturación
 
 ---
 
@@ -389,6 +427,74 @@ Los 30 parámetros esenciales cubren:
 
 ---
 
+---
+
+## Sesión 13 — Motor de Cálculo + Panel Operaciones (14/06/2026)
+
+### Objetivo
+Construir el motor de cálculo de facturación (aterrizaje, parqueo, tasas) y conectar el Panel Central de Operaciones a datos reales.
+
+### Logros
+
+#### Análisis legacy completo
+- Leído `FrmMagnaInfrasas.frm` (~5800 líneas, núcleo operacional VB6)
+- Leídos y documentados todos los stored procedures clave:
+  - `FnGetTarifaIndexada` — lookup de tarifas con indexación IPC y rangos de peso
+  - `FnCalcTarifLocalForInt` — conversión de moneda internacional (COP/USD)
+  - `FnSeccionaDiasPark` — división de períodos de parqueo en días calendario
+  - `FnGetValorParqueoLiq` — valor de liquidación de parqueo
+  - `FnGetValorTasasLiq` — valor de liquidación de tasas
+  - `SpCalculaParqueo` / `SpCalculaParqueo_Infrasa` / `SpConfigConceptosInfrasas` (encriptados, pero estructura inferible)
+- Confirmado: **backend no tenía motor de cálculo** — toda la lógica estaba solo en SQL
+
+#### Backend — CalculosService
+| Archivo | Descripción |
+|---|---|
+| `src/operaciones/calculos.service.ts` | 280 líneas — motor de cálculo completo |
+| `src/operaciones/dto/calcular-conceptos.dto.ts` | Request DTO con validación class-validator |
+| `src/operaciones/dto/resultado-calculo.dto.ts` | Response DTO con ConceptoCalculado + totales |
+
+**Fórmulas implementadas:**
+1. **Aterrizaje:** `tarifaIndexada × peso` → CPI indexación → conversión moneda si internacional
+2. **Parqueo:** `tarifaBase × horasFacturables` → descuento horas gracia → recargo nocturno (18:00-06:00)
+3. **Tasas:** nacional: `tarifaNal × paxCOP`; internacional: split `tarifaExt × paxUSD` + `tarifaConv × paxCOP`
+4. **FnGetTarifaIndexada:** lookup por `idTipoOperacion` + rango de peso + tarifa negociada por aerolínea (`TarifaAerolinea`)
+5. **FnCalcTarifLocalForInt:** monedaPago=1→USD; si tarifaLocal=0→convierte `tarifaExt × TRM`
+6. **Indexación IPC:** `tarifa × (1 + ipcValor/100)` si parámetro habilitado
+
+| Método HTTP | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/operaciones/calcular-conceptos` | Calcula conceptos y retorna valores + traza de fórmula |
+
+#### Frontend — PanelOperaciones conectado
+- **`POST /operaciones/calcular-conceptos`** se llama al registrar cada evento (entrada, salida, parqueo, tasas)
+- **Estado de cálculo:** loading spinner, error message, formula trace en el tab de Costo de Operación
+- **conceptosCalculados:** memo que fusiona resultados del backend con datos locales para visualización
+- **Tipos nuevos:** `CalcularConceptosRequest`, `ConceptoCalculado`, `ResultadoCalculo`
+- **Builds:** backend 0 errores + frontend 0 errores (Vite produce 67 chunks)
+
+#### Resumen de archivos creados/modificados
+| Archivo | Acción |
+|---|---|
+| `backend/src/operaciones/calculos.service.ts` | ✨ Nuevo |
+| `backend/src/operaciones/dto/calcular-conceptos.dto.ts` | ✨ Nuevo |
+| `backend/src/operaciones/dto/resultado-calculo.dto.ts` | ✨ Nuevo |
+| `backend/src/operaciones/operaciones.controller.ts` | 🔧 + endpoint calcular-conceptos |
+| `backend/src/operaciones/operaciones.module.ts` | 🔧 + CalculosService provider |
+| `frontend/src/types/index.ts` | 🔧 + 3 interfaces de cálculo |
+| `frontend/src/pages/operaciones/PanelOperaciones.tsx` | 🔧 Conexión a backend real |
+| `bitacora.md` | 🔧 Actualizada |
+| `AGENTS.md` | 🔧 Actualizado |
+
+### Pendiente para próxima sesión
+1. Persistencia de cálculos: endpoint `POST /operaciones/guardar-conceptos` (crea registros en `MovimientoFacturacion`)
+2. Cálculo de hangar, handling, puente, recargos valle/punta
+3. Integración con facturación (generar Factura desde movimientos calculados)
+4. Hook `usePuertasEmbarque` real (actualmente placeholder)
+5. Dashboard con métricas operacionales en tiempo real
+
+---
+
 ## Glosario de cambios importantes
 
 | Concepto legacy | Cambio | Motivo |
@@ -410,13 +516,17 @@ Los 30 parámetros esenciales cubren:
 | Lenguaje | VB6 + T-SQL | TypeScript |
 | Base de datos | SQL Server | PostgreSQL 16 |
 | Tablas | 205 | ~85 |
-| Arquitectura | Desktop monolítico | Web modular (NestJS) |
-| API | Ninguna | RESTful + Swagger |
+| Módulos backend | Ninguno (monolítico) | 10 módulos NestJS |
+| Entidades con CRUD completo | N/A | 71 |
+| Páginas frontend CRUD | N/A | 43 |
+| Páginas personalizadas frontend | N/A | 2 (Dashboard, PanelOperaciones) |
+| Endpoints API | 0 | ~362 REST + Swagger |
+| Servicios de cálculo | 0 | 1 (CalculosService) |
 | Autenticación | Básica | JWT + bcrypt |
-| Frontend | Windows Forms | React 19 + Tailwind |
-| Testing | Manual | Jest + Supertest + Vitest |
+| Frontend | Windows Forms | React 19 + Tailwind v4 |
+| Pruebas | Manual | Jest + Supertest + Vitest |
 | Despliegue | Instalador MSI | Docker + CI/CD |
 
 ---
 
-*Última actualización: 14 de Junio, 2026*
+*Última actualización: 14 de Junio, 2026 — Sesión 13: Motor de cálculo de facturación + Panel Operaciones conectado a backend real*

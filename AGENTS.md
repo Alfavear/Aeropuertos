@@ -52,23 +52,23 @@ Colas:      Bull Queue (futuro)
 /
 ├── backend/
 │   ├── prisma/
-│   │   ├── schema.prisma    # ESQUEMA MAESTRO — única fuente de verdad
+│   │   ├── schema.prisma    # ESQUEMA MAESTRO — 74 modelos
 │   │   └── seed.ts          # Seed data (países, perfiles, admin, etc.)
 │   ├── src/
 │   │   ├── main.ts          # Entry point (CORS, Swagger, ValidationPipe)
-│   │   ├── app.module.ts    # Root module
+│   │   ├── app.module.ts    # Root module (10 módulos registrados)
 │   │   ├── prisma/          # PrismaService + PrismaModule (Global)
 │   │   ├── auth/            # AuthModule: login JWT + Passport Strategy
-│   │   ├── common/          # Guards, decorators, filters, pipes
-│   │   └── modules/         # Módulos de negocio
-│   │       ├── organizacion/  # Pais, Ciudad, Aeropuerto, Zona
-│   │       ├── aerolineas/    # Aerolinea, Aeronave, TipoAeronave
-│   │       ├── operaciones/   # Itinerario, Vuelo, Puerta, Hangar
-│   │       ├── tarifas/       # Concepto, TarifaOperacion, Impuesto
-│   │       ├── facturacion/   # Factura, MovimientoFacturacion
-│   │       ├── liquidaciones/ # Liquidacion, Tasa, Pasajero
-│   │       ├── configuracion/ # ParametroSistema, IndicadorEconomico
-│   │       └── seguridad/     # Usuario, Perfil, MenuOpcion
+│   │   ├── organizacion/    # 6 entidades: Pais, Ciudad, Aeropuerto, Zona...
+│   │   ├── aerolineas/      # 9 entidades: Aerolinea, Aeronave, TipoAeronave...
+│   │   ├── tarifas/         # 7 entidades: Concepto, TarifaOperacion, Impuesto...
+│   │   ├── configuracion/   # 10 entidades: ParametroSistema, Indicador...
+│   │   ├── periodos/        # 4 entidades: Periodo, PeriodoAeropuerto, Dias...
+│   │   ├── reportes/        # 2 entidades: Reporte, CategoriaReporte
+│   │   ├── operaciones/     # 8 entidades: Itinerario, Vuelo, Puerta, Hangar...
+│   │   ├── facturacion/     # 11 entidades: Factura, Detalle, Pagos...
+│   │   ├── seguridad/       # 7 entidades: Usuario, Perfil, Permisos...
+│   │   └── liquidaciones/   # 7 entidades: Liquidacion, Tasa, Pasajero...
 │   └── package.json
 ├── frontend/
 │   ├── src/
@@ -170,12 +170,14 @@ Colas:      Bull Queue (futuro)
 - `HorarioAeropuerto` — Horarios operativos
 
 ### AEROLINEAS (aerolineas/)
-- `Aerolinea` — Aerolíneas registradas con configuración contable
-- `Aeronave` — Aeronaves con matrícula, tipo, pesos
+- `Aerolinea` — Aerolíneas registradas con configuración contable (recargos, horas gracia, OACI/IATA, facturación)
+- `Aeronave` — Aeronaves con matrícula, tipo, pesos, certificación explotación nacional
 - `TipoAeronave` — Modelos de aeronaves (B737, A320, etc.)
 - `Fabricante` — Fabricantes (Boeing, Airbus, etc.)
 - `ClaseAviacion` — Clasificación (Comercial, Carga, Privada, Militar)
 - `PersonalAerolinea` — Tripulación y personal
+- `AerolineaConcepto` — Conceptos de facturación asignados por aerolínea
+- `AerolineaConfig` — Configuración de horario único, hora valle y descuentos por aerolínea+aeropuerto
 
 ### OPERACIONES (operaciones/)
 - `Itinerario` — Itinerarios de vuelo (programación)
@@ -186,6 +188,8 @@ Colas:      Bull Queue (futuro)
 - `RegistroPeso` — Pesos registrados
 - `AsignacionPuertaVuelo` — Asignación puerta-vuelo dinámica
 - `NotaOperacion` — Notas y observaciones
+- `CalculosService` — Motor de cálculo de conceptos (aterrizaje, parqueo, tasas, servicios)
+  - `POST /operaciones/calcular-conceptos` — Calcula conceptos sin persistir (retorna valores + fórmula)
 
 ### TARIFAS (tarifas/)
 - `Concepto` — Conceptos de facturación (aterrizaje, parqueo, hangar, etc.)
@@ -210,33 +214,44 @@ Colas:      Bull Queue (futuro)
 ### LIQUIDACIONES (liquidaciones/)
 - `Liquidacion` — Liquidación de infraestructura (antes "Infrasa")
 - `ItemLiquidacion` — Items de liquidación
-- `PasajeroNacional` — Pasajeros nacionales
-- `PasajeroInternacional` — Pasajeros internacionales
-- `Tasa` — Tasas aeroportuarias
+- `PasajeroNacional` — Pasajeros nacionales con detalle por tipo
+- `PasajeroInternacional` — Pasajeros internacionales (dólares/pesos)
+- `Tasa` — Tasas aeroportuarias (valor fijo)
 - `TipoPasajero` — Adulto, Menor, Infante, Exento, Tránsito
 - `ClasePasajero` — Primera Clase, Ejecutiva, Económica
 
 ### SEGURIDAD (seguridad/)
-- `Usuario` — Usuarios del sistema
+- `Usuario` — Usuarios del sistema (bcrypt, soft-delete, oculta password)
 - `Perfil` — Roles (Admin, Operador, Facturador, Consulta)
 - `PermisoPerfil` — Permisos granular por recurso
-- `MenuOpcion` — Estructura jerárquica del menú
+- `MenuOpcion` — Estructura jerárquica del menú (idPadre)
 - `SesionUsuario` — Historial de sesiones
 - `AccesoAeropuerto` — Restricción de acceso por aeropuerto
 - `UsuarioCuenta` — Cuentas contables por usuario
 
 ### CONFIGURACION (configuracion/)
-- `ParametroSistema` — ~30 parámetros esenciales (de 55+ originales)
-- `IndicadorEconomico` — TRM, IPC, UVT
-- `CodigoAeronautico` — Códigos OACI/IATA
+- `ParametroSistema` — ~30 parámetros esenciales (cambian comportamiento: redondeos, recargos, modelo facturación)
+- `IndicadorEconomico` — TRM, IPC, UVT (con lookup por código + fecha más reciente)
+- `CodigoAeronautico` — Códigos OACI/IATA por tipo (aerolínea, aeropuerto)
 - `ServicioAereo` — Servicios aeroportuarios (Ground Handling, etc.)
-- `Secuencia` — Consecutivos
-- `Mensaje` — Mensajes del sistema
-- `TipoEvento` / `Evento` — Eventos programados
+- `Secuencia` — Consecutivos automáticos con incremento atómico
+- `Mensaje` — Mensajes del sistema (globales o por usuario)
+- `TipoEvento` / `Evento` — Catálogo de eventos programados
+- `Aplicacion` — Feature toggles (habilita/bloquea módulos)
 
-### AUDITORIA (en prisma/schema pero sin módulo aún)
-- `BitacoraError` — Log de errores (reemplaza ZeusFWErrores)
-- `AuditoriaOperacion` — Trazabilidad de cambios
+### PERIODOS (periodos/)
+- `Periodo` — Períodos contables (abiertos/cerrados) con validación de fechas
+- `PeriodoAeropuerto` — Apertura/cierre de período por aeropuerto
+- `DiaAeropuerto` — Días operativos por período y aeropuerto
+- `DiaFeriado` — Catálogo de días feriados con verificación
+
+### REPORTES (reportes/)
+- `Reporte` — Catálogo de reportes del sistema
+- `CategoriaReporte` — Categorías de reportes
+
+### AUDITORIA (pendiente de módulo)
+- `BitacoraError` — Log de errores (en schema, sin endpoint aún)
+- `AuditoriaOperacion` — Trazabilidad de cambios (en schema, sin endpoint aún)
 
 ---
 
@@ -328,23 +343,47 @@ Colas:      Bull Queue (futuro)
 Fase 0: Análisis y dimensionamiento     [100%]
 Fase 1: Diseño arquitectónico            [100%]
 Fase 2: Modelado de datos (schema)       [100%]
-Fase 3: Backend base                     [100%]
+Fase 3: Backend base                     [100%]  ← COMPLETADO (incluye motor cálculo)
 Fase 4: Frontend base                    [100%]
 Fase 5: Seeds y datos iniciales          [100%]
 ────────────────────────────────────────
-Fase 6: Módulos completos backend        [30%]  ← EN PROGRESO
-Fase 7: CRUDs completos frontend         [20%]  ← SIGUIENTE
-Fase 8: Reportes                         [0%]
-Fase 9: Seguridad y calidad              [0%]
-Fase 10: Despliegue y CI/CD              [0%]
+Fase 6: Módulos maestros backend         [100%]  ← COMPLETADO
+Fase 7: Módulos transaccionales backend  [30%]   ← CalculosService operacional
+Fase 8: CRUDs frontend                   [100%]  ← 43 páginas CRUD completadas
+Fase 9: Motor de facturación             [30%]   ← CalculosService (aterrizaje, parqueo, tasas)
+Fase 10: Seguridad y calidad             [0%]
+Fase 11: Despliegue y CI/CD              [0%]
 ```
 
+### Módulos backend completados (10 módulos, 71 entidades):
+| Módulo | Entidades | Endpoints |
+|---|---|---|
+| `organizacion` | Pais, Ciudad, Aeropuerto, Zona, ZonaAeropuerto, HorarioAeropuerto | 30 |
+| `aerolineas` | Aerolinea, Aeronave, TipoAeronave, Fabricante, ClaseAviacion, PersonalAerolinea, AerolineaConcepto, AerolineaConfig, AerolineaCtaConcepto | 45 |
+| `tarifas` | Concepto, GrupoConcepto, TipoOperacion, TarifaOperacion, TarifaAerolinea, Impuesto, TarifaOperacionHistorico | 35 |
+| `configuracion` | ParametroSistema, IndicadorEconomico, CodigoAeronautico, ServicioAereo, Secuencia, Mensaje, TipoEvento, Evento, Aplicacion, ConfigTasaAeropuerto | 50 |
+| `periodos` | Periodo, PeriodoAeropuerto, DiaAeropuerto, DiaFeriado | 26 |
+| `reportes` | Reporte, CategoriaReporte | 10 |
+| `operaciones` | Itinerario, Vuelo, PuertaEmbarque, Hangar, ServicioOperacion, RegistroPeso, AsignacionPuertaVuelo, NotaOperacion | 40 |
+| `facturacion` | Factura, FacturaDetalle, FacturaPago, FacturaImpuesto, NotaContable, AcuerdoPago, FuenteFacturacion, ConfigFacturacion, MovimientoFacturacion, Folio, FolioDetalle | 55 |
+| `seguridad` | Usuario, Perfil, PermisoPerfil, MenuOpcion, SesionUsuario, AccesoAeropuerto, UsuarioCuenta | 35 |
+| `liquidaciones` | Liquidacion, ItemLiquidacion, PasajeroNacional, PasajeroInternacional, Tasa, TipoPasajero, ClasePasajero | 35 |
+
+### Observaciones:
+- Se eliminó el módulo genérico `maestros/` — cada entidad tiene su módulo dedicado
+- Se agregaron 4 modelos nuevos al schema: `AerolineaCtaConcepto`, `TarifaOperacionHistorico`, `ConfigTasaAeropuerto`, y `idAeropuerto` a `Secuencia` (reemplaza MaeConsecutivosBu)
+- Schema actualizado a 74 modelos (70 originales + 4 nuevos)
+- Cobertura total de maestros legacy verificada: 53/61 migrados, 2 unificados, 6 excluidos justificadamente
+
 ### Próximos pasos prioritarios:
-1. Definir nombre del proyecto (pendiente)
-2. Crear módulos completos backend para cada dominio
-3. Crear CRUDs frontend para cada módulo
-4. Implementar multi-tenencia por aeropuerto
-5. Dashboard con métricas reales
+1. Completar motor de cálculo con hangar, handling, puente, recargos valle/punta
+2. Persistencia de cálculos: `POST /operaciones/guardar-conceptos` (crea MovimientoFacturacion)
+3. Integración con facturación: generar factura desde movimientos calculados
+4. Dashboard con métricas reales (operaciones hoy, ingresos, etc.)
+5. Módulo de reportes (generación PDF/Excel)
+6. Multi-tenencia por aeropuerto en todas las queries
+7. Hook `usePuertasEmbarque` real (actualmente placeholder en PanelOperaciones)
+8. Sesiones de usuario con selección de aeropuerto activo en sidebar
 
 ---
 
@@ -361,5 +400,5 @@ Fase 10: Despliegue y CI/CD              [0%]
 
 ---
 
-*Última actualización: 14 de Junio, 2026*
+*Última actualización: 14 de Junio, 2026 — Sesión 13: Motor de cálculo (CalculosService) + PanelOperaciones conectado + 43/43 CRUDs frontend*
 *Mantén este archivo actualizado con cada decisión importante.*

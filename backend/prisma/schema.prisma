@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -52,6 +51,8 @@ model Aeropuerto {
   repreAeroCivil        String?  @db.VarChar(150)
   cerrarDia             Int?
   horaCierre            String?  @db.VarChar(4)
+  accesosUsuario        AccesoAeropuerto[]
+  sesiones              SesionUsuario[]
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -222,6 +223,21 @@ model AerolineaConfig {
   aplicarDescHV Boolean @default(false)
 
   @@map("aerolineas_config")
+}
+
+model AerolineaCtaConcepto {
+  id            Int      @id @default(autoincrement())
+  idAerolinea   Int
+  idConcepto    Int
+  ctaIngresoNal String?  @db.VarChar(16)
+  ctaIngresoInt String?  @db.VarChar(16)
+  ctaIvaNal     String?  @db.VarChar(16)
+  ctaIvaInt     String?  @db.VarChar(16)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([idAerolinea, idConcepto])
+  @@map("aerolineas_ctas_concepto")
 }
 
 // ============================================================
@@ -411,6 +427,23 @@ model TarifaAerolinea {
   updatedAt            DateTime @updatedAt
 
   @@map("tarifas_aerolinea")
+}
+
+model TarifaOperacionHistorico {
+  id                         Int      @id @default(autoincrement())
+  idTarifaOperacion          Int
+  tarifaKiloLocal            Decimal  @db.Decimal(18, 10)
+  tarifaKiloExtranjero       Decimal  @db.Decimal(18, 10)
+  fechaInicial               DateTime
+  fechaCambio                DateTime @default(now())
+  rango                      String   @db.Char(1)
+  rangoInicial               Decimal? @db.Decimal(18, 2)
+  rangoFinal                 Decimal? @db.Decimal(18, 2)
+  idAeropuerto               Int?
+  usuarioCambio              String?  @db.VarChar(50)
+  createdAt                  DateTime @default(now())
+
+  @@map("tarifas_operacion_historico")
 }
 
 model Impuesto {
@@ -730,31 +763,59 @@ model ClasePasajero {
 // ============================================================
 
 model Usuario {
-  id              Int      @id @default(autoincrement())
-  username        String   @unique @db.VarChar(50)
-  password        String   @db.VarChar(500)
-  nombre          String?  @db.VarChar(100)
-  email           String?  @db.VarChar(100)
-  activo          Boolean  @default(true)
-  bloqueado       Boolean  @default(false)
-  idPerfil        Int?
-  fechaVence      DateTime?
-  ultimoAcceso    DateTime?
-  intentosFallidos Int?   @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               Int       @id @default(autoincrement())
+  username         String    @unique @db.VarChar(50)
+  password         String    @db.VarChar(500)
+  nombre           String?   @db.VarChar(100)
+  email            String?   @db.VarChar(100)
+  telefono         String?   @db.VarChar(50)
+  activo           Boolean   @default(true)
+  bloqueado        Boolean   @default(false)
+  idPerfil         Int?
+  fechaVence       DateTime?
+  ultimoAcceso     DateTime?
+  intentosFallidos Int?      @default(0)
+  debeCambiarPass  Boolean   @default(false)
+  ultimoCambioPass DateTime?
+  bloqueoProgramado Boolean  @default(false)
+  bloqueoMovimiento Boolean  @default(false)
+  bloqueoSevero     Boolean  @default(false)
+  fechaInicioBloqueo DateTime?
+  preguntaSecreta   String?  @db.VarChar(100)
+  respuestaSecreta  String?  @db.VarChar(100)
+  perfil           Perfil?    @relation(fields: [idPerfil], references: [id])
+  accesosAeropuerto AccesoAeropuerto[]
+  sesiones         SesionUsuario[]
+  cuentas          UsuarioCuenta[]
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  passwords        PasswordHistory[]
 
   @@map("usuarios")
 }
 
+model PasswordHistory {
+  id        Int      @id @default(autoincrement())
+  idUsuario Int
+  password  String   @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  usuario   Usuario  @relation(fields: [idUsuario], references: [id])
+
+  @@map("password_history")
+}
+
 model Perfil {
-  id          Int    @id @default(autoincrement())
-  codigo      String @db.VarChar(25)
-  nombre      String @db.VarChar(100)
-  descripcion String? @db.VarChar(200)
-  activo      Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id          Int       @id @default(autoincrement())
+  codigo      String    @db.VarChar(25)
+  nombre      String    @db.VarChar(100)
+  descripcion String?   @db.VarChar(200)
+  activo      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  usuarios    Usuario[]
 
   @@map("perfiles")
 }
@@ -785,17 +846,52 @@ model SesionUsuario {
   id          Int      @id @default(autoincrement())
   idUsuario   Int
   idAeropuerto Int?
+  idAeropuertoActivo Int?
   fecha       DateTime @default(now())
   ip          String?  @db.VarChar(50)
+  token       String?  @db.VarChar(500)
+
+  usuario     Usuario   @relation(fields: [idUsuario], references: [id])
+  aeropuerto  Aeropuerto? @relation(fields: [idAeropuertoActivo], references: [id])
 
   @@map("sesiones_usuario")
 }
 
 model AccesoAeropuerto {
-  id          Int @id @default(autoincrement())
-  idUsuario   Int
-  idAeropuerto Int?
+  id                           Int      @id @default(autoincrement())
+  idUsuario                    Int
+  idAeropuerto                 Int
+  usuario                      Usuario      @relation(fields: [idUsuario], references: [id])
+  activo                       Boolean  @default(true)
 
+  cambiarAeropuerto            Boolean  @default(true)
+  cambiarFechaFact             Boolean  @default(false)
+  cambiarFuente                Boolean  @default(false)
+  cambiarSerie                 Boolean  @default(false)
+  administradorPeriodos        Boolean  @default(false)
+  cambiarEstadoInclusoFacturado Boolean @default(false)
+  controlaTasas                Boolean  @default(false)
+  idPuertaControla             Int?
+  permitirReversiones          Boolean  @default(false)
+  revertirSoloPOS              Boolean  @default(false)
+  habilOperInter               Boolean  @default(false)
+
+  usaFuenteContado             Boolean  @default(false)
+  fuenteContado                String?  @db.VarChar(2)
+  serieContado                 String?  @db.VarChar(25)
+  usaFuenteCredito             Boolean  @default(false)
+  fuenteCredito                String?  @db.VarChar(2)
+  serieCredito                 String?  @db.VarChar(2)
+  usaFuenteNotasDB             Boolean  @default(false)
+  fuenteNotaDB                 String?  @db.VarChar(2)
+  serieNotaDB                  String?  @db.VarChar(2)
+  usaFuenteNotasCR             Boolean  @default(false)
+  fuenteNotaCR                 String?  @db.VarChar(2)
+  serieNotaCR                  String?  @db.VarChar(25)
+
+  aeropuerto Aeropuerto @relation(fields: [idAeropuerto], references: [id])
+
+  @@unique([idUsuario, idAeropuerto])
   @@map("accesos_aeropuerto")
 }
 
@@ -805,6 +901,8 @@ model UsuarioCuenta {
   cuenta      String @db.VarChar(16)
   descripcion String? @db.VarChar(100)
 
+  usuario     Usuario @relation(fields: [idUsuario], references: [id])
+
   @@map("usuarios_cuentas")
 }
 
@@ -813,13 +911,17 @@ model UsuarioCuenta {
 // ============================================================
 
 model ParametroSistema {
-  id          Int    @id @default(autoincrement())
-  codigo      String @db.VarChar(50)
-  nombre      String @db.VarChar(100)
-  descripcion String? @db.VarChar(500)
-  valor       String? @db.VarChar(500)
-  tipo        String? @db.VarChar(50)
-  modulo      String? @db.VarChar(100)
+  id          Int      @id @default(autoincrement())
+  codigo      String   @unique @db.VarChar(50)
+  nombre      String   @db.VarChar(100)
+  descripcion String?  @db.VarChar(500)
+  valor       String?  @db.VarChar(500)
+  tipo        String   @db.VarChar(20)  // STRING | NUMBER | BOOLEAN | OPTIONS
+  modulo      String   @db.VarChar(100) // Operaciones | Facturación | Aerolíneas | Parqueos | Tasas | General | Seguridad
+  opciones    String?  @db.VarChar(1000) // Lista separada por comas (solo si tipo = OPTIONS)
+  orden       Int      @default(0)
+  editable    Boolean  @default(true)   // Legacy: DeUsuario
+  visible     Boolean  @default(true)   // Legacy: OcultarParametrosNoUtiles
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -865,10 +967,23 @@ model Secuencia {
   id          Int    @id @default(autoincrement())
   nombre      String @db.VarChar(100)
   consecutivo Int    @default(0)
+  idAeropuerto Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([nombre, idAeropuerto])
   @@map("secuencias")
+}
+
+model ConfigTasaAeropuerto {
+  id            Int    @id @default(autoincrement())
+  idAeropuerto  Int    @unique
+  codigoEAN13   String? @db.VarChar(20)
+  reporteTasa   String? @db.VarChar(100)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("config_tasas_aeropuerto")
 }
 
 model Mensaje {

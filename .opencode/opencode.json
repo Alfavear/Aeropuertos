@@ -1,0 +1,85 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "username": "aerogest-dev",
+
+  "instructions": ["AGENTS.md", "bitacora.md"],
+
+  "lsp": {
+    "typescript": {
+      "enabled": true,
+      "command": ["node", "./node_modules/typescript/bin/tsserver"],
+      "cwd": "${workspaceFolder}/backend"
+    }
+  },
+
+  "mcp": {
+    "postgres": {
+      "type": "local",
+      "command": ["npx", "-y", "@anthropic/mcp-postgres"],
+      "enabled": false,
+      "env": {
+        "PGHOST": "localhost",
+        "PGPORT": "5432",
+        "PGDATABASE": "aerogest",
+        "PGUSER": "postgres",
+        "PGPASSWORD": "${PGPASSWORD}"
+      }
+    },
+    "github": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
+      "enabled": false,
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "filesystem": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem"],
+      "enabled": true,
+      "env": {}
+    }
+  },
+
+  "agent": {
+    "aerogest-backend": {
+      "description": "Experto en backend NestJS para el sistema aeroportuario multi-aeropuerto. Usar para tareas de servicios, controladores, DTOs, Prisma y lógica de negocio.",
+      "mode": "subagent",
+      "model": "deepseek/deepseek-v4-flash-free",
+      "permission": {
+        "edit": "allow",
+        "bash": {
+          "npm *": "allow",
+          "npx *": "allow",
+          "cd *": "allow",
+          "*": "ask"
+        }
+      },
+      "prompt": "Eres un experto en NestJS + Prisma + TypeScript para el proyecto AeroGest (sistema de administración aeroportuaria multi-aeropuerto). Sigue ESTRICTAMENTE las convenciones en AGENTS.md. NO uses nombres legacy (Mae, Cls, etc.). Crea módulos completos con DTOs, services y controllers para cada entidad. Siempre verifica que el build compile antes de terminar (npm run build)."
+    }
+  },
+
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "npm *": "allow",
+      "npx *": "allow",
+      "git *": "allow",
+      "*": "ask"
+    }
+  },
+
+  "experimental": {
+    "primary_tools": ["edit", "bash", "read", "write", "grep", "glob"],
+    "mcp_timeout": 60000
+  },
+
+  "tool_output": {
+    "max_lines": 300,
+    "max_bytes": 10240
+  }
+}

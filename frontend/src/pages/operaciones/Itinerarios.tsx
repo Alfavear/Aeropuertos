@@ -1,0 +1,172 @@
+import { useState } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Plus, Pencil, Trash2, Calendar } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { DataTable } from '@/components/shared/DataTable'
+import { CrudModal } from '@/components/shared/CrudModal'
+import { StatusBadge, statusVariant } from '@/components/shared/StatusBadge'
+import { ToggleSwitch } from '@/components/shared/ToggleSwitch'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import type { Column } from '@/components/shared/DataTable'
+import type { Itinerario } from '@/types'
+import { useItinerarios } from '@/hooks/modules'
+import { useAerolineas } from '@/hooks/modules'
+
+const schema = z.object({
+  codigo: z.string().min(1, 'El código es requerido'),
+  idAerolinea: z.coerce.number().min(1, 'La aerolínea es requerida'),
+  origen: z.string().min(1, 'El origen es requerido'),
+  destino: z.string().min(1, 'El destino es requerido'),
+  diaSemana: z.coerce.number().min(1, 'Seleccione un día').max(7, 'Día inválido'),
+  horaSalida: z.string().min(1, 'La hora de salida es requerida'),
+  horaLlegada: z.string().min(1, 'La hora de llegada es requerida'),
+  activo: z.boolean().default(true),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const diasSemana = [
+  { value: 1, label: 'Lunes' },
+  { value: 2, label: 'Martes' },
+  { value: 3, label: 'Miércoles' },
+  { value: 4, label: 'Jueves' },
+  { value: 5, label: 'Viernes' },
+  { value: 6, label: 'Sábado' },
+  { value: 7, label: 'Domingo' },
+]
+
+const diaLabel = (d: number) => diasSemana.find((ds) => ds.value === d)?.label || `#${d}`
+
+export default function Itinerarios() {
+  const itinerarios = useItinerarios()
+  const { data, isLoading, error } = itinerarios.useList()
+  const createMutation = itinerarios.useCreate()
+  const updateMutation = itinerarios.useUpdate()
+  const deleteMutation = itinerarios.useRemove()
+  const { data: aerolineasList } = useAerolineas().useList()
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<Itinerario | null>(null)
+  const [deleteId, setDeleteId] = useState<number | null>(null)
+
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { codigo: '', idAerolinea: 0, origen: '', destino: '', diaSemana: 1, horaSalida: '', horaLlegada: '', activo: true },
+  })
+
+  const onSubmit = async (form: FormValues) => {
+    if (editing) {
+      await updateMutation.mutateAsync({ id: editing.id, data: form })
+    } else {
+      await createMutation.mutateAsync(form)
+    }
+    setOpen(false)
+    setEditing(null)
+    reset({ codigo: '', idAerolinea: 0, origen: '', destino: '', diaSemana: 1, horaSalida: '', horaLlegada: '', activo: true })
+  }
+
+  const handleEdit = (item: Itinerario) => {
+    setEditing(item)
+    reset({ codigo: item.codigo, idAerolinea: item.idAerolinea, origen: item.origen, destino: item.destino, diaSemana: item.diaSemana, horaSalida: item.horaSalida, horaLlegada: item.horaLlegada, activo: item.activo })
+    setOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (deleteId) {
+      await deleteMutation.mutateAsync(deleteId)
+      setDeleteId(null)
+    }
+  }
+  const handleAdd = () => { setEditing(null); reset({ codigo: '', idAerolinea: 0, origen: '', destino: '', diaSemana: 1, horaSalida: '', horaLlegada: '', activo: true }); setOpen(true) }
+
+  const columns: Column<Itinerario>[] = [
+    { key: 'codigo', header: 'Código', sortable: true, render: (item) => <span className="font-mono text-sm font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{item.codigo}</span> },
+    { key: 'aerolineaNombre', header: 'Aerolínea', sortable: true, render: (item) => <span className="font-medium">{item.aerolineaNombre || `#${item.idAerolinea}`}</span> },
+    { key: 'origen', header: 'Origen', sortable: true, render: (item) => <span className="font-mono text-sm">{item.origen}</span> },
+    { key: 'destino', header: 'Destino', sortable: true, render: (item) => <span className="font-mono text-sm">{item.destino}</span> },
+    { key: 'diaSemana', header: 'Día', sortable: true, render: (item) => <span className="font-medium">{diaLabel(item.diaSemana)}</span> },
+    { key: 'horaSalida', header: 'Salida', render: (item) => <span className="font-mono text-sm">{item.horaSalida}</span> },
+    { key: 'horaLlegada', header: 'Llegada', render: (item) => <span className="font-mono text-sm">{item.horaLlegada}</span> },
+    { key: 'activo', header: 'Estado', sortable: true, render: (item) => <StatusBadge variant={statusVariant(item.activo)} label={item.activo ? 'Activo' : 'Inactivo'} /> },
+    { key: 'acciones', header: 'Acciones', className: 'text-right', render: (item) => (
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} className="hover:text-indigo-600"><Pencil className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={() => setDeleteId(item.id)} className="hover:text-rose-600"><Trash2 className="h-4 w-4" /></Button>
+      </div>
+    )},
+  ]
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Itinerarios" subtitle="Programación semanal de vuelos por frecuencia" action={<Button onClick={handleAdd}><Plus className="h-4 w-4" /> Nuevo Itinerario</Button>} />
+      {isLoading && (
+        <div className="flex items-center justify-center h-64">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+        </div>
+      )}
+      {error && (
+        <div className="flex items-center justify-center h-64 text-rose-500">
+          Error al cargar datos: {(error as Error).message}
+        </div>
+      )}
+      {!isLoading && !error && (
+        <DataTable columns={columns} data={data || []} keyExtractor={(i) => i.id} searchKeys={['codigo', 'origen', 'destino']} searchPlaceholder="Buscar itinerario..." />
+      )}
+      <CrudModal open={open} onOpenChange={setOpen} title={editing ? `Editar: ${editing.codigo}` : 'Nuevo Itinerario'} isEditing={!!editing} onSubmit={handleSubmit(onSubmit)}>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">Código</label>
+            <Input {...register('codigo')} placeholder="Ej: AV-123" className="font-mono uppercase" />
+            {errors.codigo && <p className="text-xs text-rose-500">{errors.codigo.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">Aerolínea</label>
+            <Controller name="idAerolinea" control={control} render={({ field }) => (
+              <select value={field.value > 0 ? String(field.value) : ''} onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-400">
+                <option value="">Seleccione...</option>
+                {aerolineasList?.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+              </select>
+            )} />
+            {errors.idAerolinea && <p className="text-xs text-rose-500">{errors.idAerolinea.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">Origen</label>
+            <Input {...register('origen')} placeholder="Ej: BOG" className="font-mono uppercase" />
+            {errors.origen && <p className="text-xs text-rose-500">{errors.origen.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">Destino</label>
+            <Input {...register('destino')} placeholder="Ej: MDE" className="font-mono uppercase" />
+            {errors.destino && <p className="text-xs text-rose-500">{errors.destino.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">Día de la Semana</label>
+            <Controller name="diaSemana" control={control} render={({ field }) => (
+              <select value={String(field.value)} onChange={(e) => field.onChange(Number(e.target.value))} className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-400">
+                {diasSemana.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+              </select>
+            )} />
+            {errors.diaSemana && <p className="text-xs text-rose-500">{errors.diaSemana.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">Hora Salida</label>
+            <Input type="time" {...register('horaSalida')} className="font-mono" />
+            {errors.horaSalida && <p className="text-xs text-rose-500">{errors.horaSalida.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">Hora Llegada</label>
+            <Input type="time" {...register('horaLlegada')} className="font-mono" />
+            {errors.horaLlegada && <p className="text-xs text-rose-500">{errors.horaLlegada.message}</p>}
+          </div>
+          <div className="col-span-2 flex items-center p-3 bg-slate-50 rounded-lg">
+            <Controller name="activo" control={control} render={({ field }) => <ToggleSwitch field={field} label="Itinerario activo" />} />
+          </div>
+        </div>
+      </CrudModal>
+      <ConfirmDialog open={deleteId !== null} onOpenChange={(v) => { if (!v) setDeleteId(null) }} onConfirm={handleDelete} title="Eliminar Itinerario" message="¿Está seguro de eliminar este itinerario?" />
+    </div>
+  )
+}

@@ -6,9 +6,14 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token
+  const store = useAuthStore.getState()
+  const token = store.token
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+  const aeropuertoActivo = store.aeropuertoActivo
+  if (aeropuertoActivo) {
+    config.headers['X-Aeropuerto-Activo'] = String(aeropuertoActivo.id)
   }
   return config
 })

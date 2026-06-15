@@ -421,21 +421,21 @@ async function main() {
   // ================================================================
   // 14. INDICADORES ECONOMICOS
   // ================================================================
-  await prisma.indicadorEconomico.upsert({
-    where: { id: 1 },
-    update: {},
-    create: { id: 1, codigo: 'TRM', descripcion: 'Tasa Representativa del Mercado', valor: 4200, fecha: new Date() },
-  });
-  await prisma.indicadorEconomico.upsert({
-    where: { id: 2 },
-    update: {},
-    create: { id: 2, codigo: 'IPC', descripcion: 'Índice de Precios al Consumidor', valor: 5.2, fecha: new Date() },
-  });
-  await prisma.indicadorEconomico.upsert({
-    where: { id: 3 },
-    update: {},
-    create: { id: 3, codigo: 'UVT', descripcion: 'Unidad de Valor Tributario', valor: 47000, fecha: new Date() },
-  });
+    await prisma.indicadorEconomico.upsert({
+      where: { id: 1 },
+      update: {},
+      create: { id: 1, codigo: 'TRM', descripcion: 'Tasa Representativa del Mercado', valor: 4200, valorProx: 4200, fecha: new Date() },
+    });
+    await prisma.indicadorEconomico.upsert({
+      where: { id: 2 },
+      update: {},
+      create: { id: 2, codigo: 'IPC', descripcion: 'Índice de Precios al Consumidor', valor: 5.2, valorProx: 5.2, fecha: new Date() },
+    });
+    await prisma.indicadorEconomico.upsert({
+      where: { id: 3 },
+      update: {},
+      create: { id: 3, codigo: 'UVT', descripcion: 'Unidad de Valor Tributario', valor: 47000, valorProx: 47000, fecha: new Date() },
+    });
 
   console.log(`  ✓ ${3} indicadores económicos creados`);
 

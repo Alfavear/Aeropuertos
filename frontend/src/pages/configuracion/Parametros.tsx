@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useParametrosSistema } from '@/hooks/modules'
 
 // ----------------------------------------------------------------------
 // SCHEMA & TYPES
@@ -26,15 +27,6 @@ interface ParametroItem {
 
 const modulosDisponibles = ['General', 'Operaciones', 'Aerolíneas', 'Facturación', 'Seguridad']
 
-// MOCK DATA (Inspirado en la base de datos real de VB6/Prisma)
-const initialParams: ParametroItem[] = [
-  { id: 1004, codigo: 'OP_HRS_GRACIA', nombre: 'Horas de Gracia Operativas', descripcion: 'Tiempo permitido antes de cobrar extra por pernocta.', valor: '2', tipo: 'NUMBER', modulo: 'Operaciones' },
-  { id: 1117, codigo: 'OP_CIERRE_AUTO', nombre: 'Cierre de Vuelos Automático', descripcion: '¿Cerrar vuelos del día anterior automáticamente a media noche?', valor: 'true', tipo: 'BOOLEAN', modulo: 'Operaciones' },
-  { id: 1038, codigo: 'AL_ASISTENCIA_DEF', nombre: 'Asistencia Pasajero Default', descripcion: 'Cobra por defecto asistencia en tierra a las nuevas aerolíneas.', valor: 'false', tipo: 'BOOLEAN', modulo: 'Aerolíneas' },
-  { id: 9994, codigo: 'FAC_TASA_AERO', nombre: 'Moneda Tasa Aeroportuaria', descripcion: 'Moneda base para el cobro de tasas internacionales.', valor: 'USD', tipo: 'OPTIONS', modulo: 'Facturación', opciones: ['COP', 'USD', 'EUR'] },
-  { id: 1200, codigo: 'GEN_NOMBRE_AERO', nombre: 'Nombre de la Concesión', descripcion: 'Nombre legal de la concesión que opera el aeropuerto.', valor: 'AeroNova Operators S.A.', tipo: 'STRING', modulo: 'General' },
-]
-
 // Zod schema para CREAR nuevo parámetro
 const newParamSchema = z.object({
   modulo: z.string().min(1, 'Selecciona un módulo'),
@@ -52,10 +44,18 @@ type NewParamFormValues = z.infer<typeof newParamSchema>
 // COMPONENTE PRINCIPAL
 // ----------------------------------------------------------------------
 export default function Parametros() {
-  const [params, setParams] = useState<ParametroItem[]>(initialParams)
+  const parametrosSistema = useParametrosSistema()
+  const { data: apiData, isLoading, error } = parametrosSistema.useList()
+  const createMutation = parametrosSistema.useCreate()
+
+  const [params, setParams] = useState<ParametroItem[]>([])
   const [activeModule, setActiveModule] = useState<string>('Todos')
   const [search, setSearch] = useState('')
   const [openCreator, setOpenCreator] = useState(false)
+
+  useEffect(() => {
+    if (apiData) setParams(apiData as ParametroItem[])
+  }, [apiData])
 
   // -- FORMULARIO DE CREACIÓN --
   const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<NewParamFormValues>({
@@ -79,9 +79,8 @@ export default function Parametros() {
   }
 
   // Guardar nuevo parámetro
-  const onSubmitNewParam = (data: NewParamFormValues) => {
-    const newParam: ParametroItem = {
-      id: Date.now(),
+  const onSubmitNewParam = async (data: NewParamFormValues) => {
+    await createMutation.mutateAsync({
       codigo: data.codigo,
       nombre: data.nombre,
       descripcion: data.descripcion || '',
@@ -89,8 +88,7 @@ export default function Parametros() {
       modulo: data.modulo,
       valor: data.tipo === 'BOOLEAN' ? 'false' : (data.valor || ''),
       opciones: data.tipo === 'OPTIONS' ? data.opcionesStr?.split(',').map(s => s.trim()) : undefined
-    }
-    setParams([...params, newParam])
+    })
     setOpenCreator(false)
     reset()
   }
@@ -150,7 +148,18 @@ export default function Parametros() {
           </div>
         </div>
 
-        {/* LISTADO DINÁMICO */}
+        {/* LOADING / ERROR */}
+        {isLoading && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+          </div>
+        )}
+        {error && (
+          <div className="flex-1 flex items-center justify-center text-rose-500">
+            Error al cargar datos: {(error as Error).message}
+          </div>
+        )}
+        {!isLoading && !error && (
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {modulosDisponibles.filter(m => activeModule === 'Todos' || activeModule === m).map(mod => {
             const paramsInModule = filteredParams.filter(p => p.modulo === mod)
@@ -227,6 +236,7 @@ export default function Parametros() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* MODAL CREADOR DE PARÁMETROS */}
